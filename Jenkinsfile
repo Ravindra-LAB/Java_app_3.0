@@ -43,6 +43,28 @@ pipeline{
                }
             }
         }
+        
+         stage('Publish to Artifactory') {
+         when { expression { params.action == 'create'}}    
+            steps {
+                script {
+                    def server = Artifactory.server ARTIFACTORY_SERVER
+                    def rtMaven = Artifactory.newMavenBuild()
+                    
+                    rtMaven.tool = MAVEN_HOME
+                    rtMaven.deployer server: server, releaseRepo: MAVEN_REPO, snapshotRepo: MAVEN_REPO
+                    rtMaven.deployer.deployArtifacts = false
+                    rtMaven.deployer.deployBuildInfo = true
+                    
+                    def buildInfo = rtMaven.run pom: 'pom.xml', goals: 'clean install'
+                    
+                    server.publishBuildInfo buildInfo
+                }
+            }
+        }
+
+        
+        
         stage('Static code analysis: Sonarqube'){
          when { expression {  params.action == 'create' } }
             steps{
